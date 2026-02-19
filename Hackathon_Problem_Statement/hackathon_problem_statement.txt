@@ -1,0 +1,134 @@
+# [cite_start]RIFT 2026 HACKATHON [cite: 1]
+[cite_start]AI/ML DevOps Automation Agentic Systems Track [cite: 2]
+[cite_start]BUILD AN AUTONOMOUS CI/CD HEALING AGENT [cite: 3]
+[cite_start]Autonomous DevOps Agent with React Dashboard [cite: 4]
+[cite_start]Multi-city Hackathon AIML Track [cite: 5]
+
+## [cite_start]BACKGROUND CONTEXT [cite: 6]
+Modern software development relies heavily on CI/CD pipelines. [cite_start]However, these pipelines frequently fail due to various issues including code quality issues, logic bugs, syntax errors, type errors, and integration issues between multiple files. [cite: 7] [cite_start]Developers spend 40-60% of their time debugging these failures instead of building new features. [cite: 8] [cite_start]This challenge tasks you to build an agent that can autonomously detect, fix, and verify code issues. [cite: 9]
+
+## [cite_start]CORE CHALLENGE [cite: 10]
+[cite_start]Build an Autonomous DevOps Agent with a React Dashboard that: [cite: 11]
+* [cite_start]Takes a GitHub repository URL as input via the web interface [cite: 12]
+* [cite_start]Clones and analyzes the repository structure [cite: 13]
+* [cite_start]Discovers and runs all test files automatically [cite: 14]
+* [cite_start]Identifies all failures and generates targeted fixes [cite: 15]
+* [cite_start]Commits fixes with [AI-AGENT] prefix and pushes to a new branch [cite: 16]
+* [cite_start]Monitors CI/CD pipeline and iterates until all tests pass [cite: 17]
+* [cite_start]Displays comprehensive results in a React dashboard [cite: 18]
+
+## [cite_start]REACT DASHBOARD REQUIREMENTS [cite: 19]
+[cite_start]▲ The React dashboard is the primary interface judges will use to evaluate your agent. [cite: 20] [cite_start]It MUST be production-ready and publicly deployed. [cite: 21]
+
+1. [cite_start]Input Section [cite: 22]
+* [cite_start]Text input for GitHub repository URL [cite: 23]
+* [cite_start]Text input for Team Name (e.g., "RIFT ORGANISERS") and Text input for Team Leader Name (e.g., "Saiyam Kumar") [cite: 24]
+* [cite_start]"Run Agent" or "Analyze Repository" button [cite: 25]
+* [cite_start]Loading indicator while agent is running [cite: 26]
+
+2. [cite_start]Run Summary Card [cite: 27]
+* [cite_start]Repository URL that was analyzed [cite: 28]
+* [cite_start]Team name and team leader name [cite: 29]
+* [cite_start]Branch name created (TEAM_NAME_LEADER_AI_Fix) [cite: 30]
+* [cite_start]Total failures detected and total fixes applied [cite: 31]
+* [cite_start]Final CI/CD status badge: PASSED (green) / FAILED (red) [cite: 32]
+* [cite_start]Total time taken (start to finish) [cite: 33]
+
+3. [cite_start]Score Breakdown Panel [cite: 34]
+* [cite_start]Base score: 100 points [cite: 35]
+* [cite_start]Speed bonus applied (+10 if <5 minutes) [cite: 36]
+* [cite_start]Efficiency penalty (-2 per commit over 20) [cite: 37]
+* [cite_start]Final total score displayed prominently [cite: 38]
+* [cite_start]Visual chart/progress bar showing score breakdown [cite: 39]
+
+4. [cite_start]Fixes Applied Table [cite: 40]
+* Table with columns: File | Bug Type | Line Number | Commit Message | [cite_start]Status [cite: 41, 42]
+* [cite_start]Bug types: LINTING, SYNTAX, LOGIC, TYPE_ERROR, IMPORT, INDENTATION [cite: 43]
+* [cite_start]Status: Fixed or Failed [cite: 44]
+* [cite_start]Color coding: Green for success, red for failure [cite: 45]
+
+5. [cite_start]CI/CD Status Timeline [cite: 46]
+* [cite_start]Timeline visualization showing each CI/CD run [cite: 47]
+* [cite_start]Pass/fail badge for each iteration [cite: 48]
+* [cite_start]Number of iterations used out of retry limit (e.g., "3/5") [cite: 49]
+* [cite_start]Timestamp for each run [cite: 50]
+
+## [cite_start]BRANCH NAMING REQUIREMENTS [cite: 51]
+[cite_start]▲ CRITICAL: Your agent MUST create branches with this EXACT format: TEAM_NAME_LEADER_NAME_AI_Fix [cite: 52]
+
+[cite_start]Naming Rules: [cite: 53]
+* [cite_start]All UPPERCASE [cite: 54]
+* [cite_start]Replace spaces with underscores () [cite: 55]
+* [cite_start]End with _Al_Fix (no brackets) [cite: 56]
+* [cite_start]No special characters except underscores [cite: 57]
+
+| Team Name | Leader Name | Branch |
+| :--- | :--- | :--- |
+| RIFT ORGANISERS | Saiyam Kumar | [cite_start]RIFT_ORGANISERS_SAIYAM_KUMAR_AI_Fix [cite: 58] |
+| Code Warriors | John Doe | [cite_start]CODE_WARRIORS_JOHN_DOE_Al_Fix [cite: 58] |
+
+## [cite_start]TEST CASE MATCHING [cite: 59]
+[cite_start]EXACT FORMAT REQUIRED [cite: 60]
+[cite_start]▲ CRITICAL: Your agent's output MUST match our test cases line-by-line. [cite: 61]
+[cite_start]Judges will evaluate based on exact matches: [cite: 62]
+
+| Test Case | Expected Dashboard Output |
+| :--- | :--- |
+| Line 15: Unused src/utils.py import 'os' | [cite_start]LINTING error in src/utils.py line 15 Fix: remove the import statement [cite: 63] |
+| src/validator.py - Line 8: Missing colon | [cite_start]SYNTAX error in src/validator.py line 8→ Fix: add the colon at the correct position [cite: 63] |
+
+## [cite_start]TECHNICAL REQUIREMENTS [cite: 64]
+[cite_start]Frontend [cite: 65]
+* [cite_start]Must be built with React (functional components + hooks) [cite: 66]
+* [cite_start]Must be responsive (desktop + mobile) [cite: 67]
+* [cite_start]Must be deployed and publicly accessible [cite: 68]
+* [cite_start]Frontend code must be in /frontend folder in repository [cite: 69]
+* [cite_start]Must use proper state management (Context API, Redux, Zustand, etc.) [cite: 70]
+
+[cite_start]Backend / Agent [cite: 71]
+* [cite_start]Must generate results.json file at end of each run [cite: 72]
+* [cite_start]Must include API endpoint that triggers agent (REST or GraphQL) [cite: 73]
+* [cite_start]Must use multi-agent architecture (LangGraph, CrewAl, AutoGen, etc.) [cite: 74]
+* [cite_start]Code execution must be sandboxed (Docker recommended) [cite: 75]
+* [cite_start]Must have configurable retry limit (default: 5) [cite: 76]
+
+## [cite_start]MANDATORY SUBMISSION REQUIREMENTS [cite: 77]
+ALL of the following are MANDATORY. [cite_start]Missing any component will result in DISQUALIFICATION. [cite: 78]
+
+| # | Requirement | Details |
+| :--- | :--- | :--- |
+| 1 | Live Deployed Website URL | React dashboard must be publicly accessible. Must accept GitHub repo URL as input. [cite_start]Platforms: Vercel, Netlify, Railway, AWS, or any hosting service. [cite: 79] |
+| 2 | LinkedIn Video Demonstration | 2-3 min max. Must tag @RIFT2026 on LinkedIn. Must show: live demo, architecture diagram, agent workflow walkthrough, results dashboard. [cite_start]Post must be public. [cite: 79] |
+| 3 | GitHub Repository + README | Public repo. [cite_start]README must include: project title, deployment URL, LinkedIn video URL, architecture diagram, installation instructions, environment setup, usage examples, supported bug types, tech stack, known limitations, team members. [cite: 79] |
+
+[cite_start]SUBMISSION FIELDS [cite: 80]
+* [cite_start]Problem Statement selected (on RIFT website 19th Feb, 6-8 PM window) [cite: 81]
+* [cite_start]GitHub Repository URL [cite: 82]
+* [cite_start]Hosted / Live Application URL [cite: 83]
+* [cite_start]Demo video link posted on LinkedIn tagging RIFT's official page [cite: 84]
+
+## [cite_start]EVALUATION CRITERIA [cite: 85]
+
+| Criterion | Points | Description |
+| :--- | :--- | :--- |
+| Test Case Accuracy | 40 | [cite_start]Exact match with test cases: correct bug types, line numbers, fixes applied [cite: 86] |
+| Dashboard Quality | 25 | [cite_start]All required sections, clear visualization, responsive design, live deployment [cite: 86] |
+| Agent Architecture | 20 | [cite_start]Multi-agent structure, proper tool integration, sandboxed execution, iteration handling [cite: 86] |
+| Documentation | 10 | [cite_start]Complete README, architecture diagram clarity, setup instructions accuracy [cite: 86] |
+| Video Presentation | 5 | [cite_start]Clear explanation of architecture, live demo quality, professional presentation [cite: 86] |
+
+## [cite_start]DISQUALIFICATION CRITERIA [cite: 87]
+[cite_start]▲ Immediate disqualification for any of the following: [cite: 88]
+* [cite_start]No live deployment URL [cite: 89]
+* [cite_start]No LinkedIn video posted [cite: 90]
+* [cite_start]Incomplete README [cite: 91]
+* [cite_start]Output does not match test cases [cite: 92]
+* [cite_start]Human intervention during agent execution [cite: 93]
+* [cite_start]Hardcoded test file paths [cite: 94]
+* [cite_start]Commits without [AI-AGENT] prefix [cite: 95]
+* [cite_start]Incorrect branch name format [cite: 96]
+* [cite_start]Pushing directly to main branch [cite: 97]
+* [cite_start]Plagiarized code from other teams [cite: 98]
+
+Good luck! [cite_start]We're excited to see what you build. [cite: 99]
+- [cite_start]RIFT 2026 Organizing Team [cite: 100]
