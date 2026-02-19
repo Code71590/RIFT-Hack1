@@ -526,4 +526,15 @@ def run_pipeline(repo_url: str, team_name: str, leader_name: str,
         "result": result,
     })
 
+    # ═══════════════════════════════════════════════════════════════
+    #  GENERATE results.json (mandatory per problem statement)
+    # ═══════════════════════════════════════════════════════════════
+    try:
+        results_path = os.path.join(WORKSPACE_DIR, "results.json")
+        with open(results_path, "w", encoding="utf-8") as f:
+            json.dump(result, f, indent=2, default=str)
+        _info("OUTPUT", f"results.json written to {results_path}")
+    except Exception as e:
+        _info("WARN", f"Failed to write results.json: {e}")
+
     return result

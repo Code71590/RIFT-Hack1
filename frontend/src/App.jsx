@@ -1,15 +1,15 @@
 import { useState, useEffect, useRef, createContext, useContext } from 'react'
 import './index.css'
 
-const API_BASE = 'http://localhost:5000'
+const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.PROD ? '' : 'http://localhost:5000')
 
 /* ========== APP STATE CONTEXT ========== */
 const AppContext = createContext()
 
 function AppProvider({ children }) {
   const [repoUrl, setRepoUrl] = useState('https://github.com/Code71590/buggy-calculator')
-  const [teamName, setTeamName] = useState('')
-  const [leaderName, setLeaderName] = useState('')
+  const [teamName, setTeamName] = useState('Bubble')
+  const [leaderName, setLeaderName] = useState('Ullas A U')
   const [isRunning, setIsRunning] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
   const [events, setEvents] = useState([])

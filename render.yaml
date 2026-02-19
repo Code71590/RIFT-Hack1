@@ -1,0 +1,48 @@
+# Render Blueprint — deploys both frontend and backend
+# https://render.com/docs/blueprint-spec
+
+services:
+  # ═══════════════════════════════════════════════════════════════
+  #  Backend — Flask API + Agent Pipeline
+  # ═══════════════════════════════════════════════════════════════
+  - type: web
+    name: rift-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: USE_DUMMY_LLM
+        value: "false"
+      - key: LLM_PROVIDER
+        sync: false  # set manually in Render dashboard
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: "gemini-flash-latest"
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: "qwen/qwen3-next-80b-a3b-instruct:free"
+
+  # ═══════════════════════════════════════════════════════════════
+  #  Frontend — React Static Site
+  # ═══════════════════════════════════════════════════════════════
+  - type: web
+    name: rift-frontend
+    runtime: static
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    rootDir: ./frontend
+    plan: free
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

@@ -4,10 +4,19 @@ Supports Server-Sent Events (SSE) for real-time frontend updates.
 """
 
 import json
+import os
 import queue
 import threading
 from flask import Flask, jsonify, request, Response
 from flask_cors import CORS
+
+# Load .env so GITHUB_TOKEN and other vars are available to all modules
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
+except ImportError:
+    pass
+
 from agent.pipeline import run_pipeline
 
 app = Flask(__name__)
@@ -171,6 +180,16 @@ def sse_stream():
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@app.route("/api/results", methods=["GET"])
+def get_results():
+    """Serve the latest results.json file."""
+    results_path = os.path.join(os.path.dirname(__file__), "workspace", "results.json")
+    if os.path.exists(results_path):
+        with open(results_path, "r", encoding="utf-8") as f:
+            return Response(f.read(), mimetype="application/json")
+    return jsonify({"error": "No results available yet"}), 404
 
 
 @app.route("/api/health", methods=["GET"])

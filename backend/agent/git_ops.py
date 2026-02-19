@@ -122,7 +122,7 @@ def commit_and_push(repo_path: str, commit_message: str, branch_name: str) -> di
     if push_success:
         print(f"[GIT] Push successful: {branch_name}")
     else:
-        print(f"[GIT] Push failed: {push_result.stderr}")
+        print(f"[GIT] Push failed: {push_result.stderr.strip()} | stdout: {push_result.stdout.strip()}")
 
     return {
         "success": True,

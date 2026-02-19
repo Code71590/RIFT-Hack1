@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  # ═══════════════════════════════════════════════════════════════
+  #  Backend — Flask API + Agent Pipeline
+  # ═══════════════════════════════════════════════════════════════
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: rift-backend
+    env_file:
+      - ./backend/.env
+    volumes:
+      - backend-workspace:/app/workspace
+      - backend-logs:/app/logs
+    expose:
+      - "5000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ═══════════════════════════════════════════════════════════════
+  #  Frontend — React Dashboard (Nginx)
+  # ═══════════════════════════════════════════════════════════════
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: rift-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  backend-workspace:
+  backend-logs:
