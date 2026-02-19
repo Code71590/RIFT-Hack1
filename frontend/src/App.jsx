@@ -1,17 +1,62 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, createContext, useContext } from 'react'
 import './index.css'
 
 const API_BASE = 'http://localhost:5000'
 
-function App() {
+/* ========== APP STATE CONTEXT ========== */
+const AppContext = createContext()
+
+function AppProvider({ children }) {
   const [repoUrl, setRepoUrl] = useState('https://github.com/Code71590/buggy-calculator')
   const [teamName, setTeamName] = useState('')
   const [leaderName, setLeaderName] = useState('')
   const [isRunning, setIsRunning] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
-  const [events, setEvents] = useState([])         // Live SSE events
+  const [events, setEvents] = useState([])
   const [finalResult, setFinalResult] = useState(null)
+  const [ciRuns, setCiRuns] = useState([])
   const eventSourceRef = useRef(null)
+
+  const value = {
+    repoUrl, setRepoUrl,
+    teamName, setTeamName,
+    leaderName, setLeaderName,
+    isRunning, setIsRunning,
+    statusMessage, setStatusMessage,
+    events, setEvents,
+    finalResult, setFinalResult,
+    ciRuns, setCiRuns,
+    eventSourceRef,
+  }
+
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>
+}
+
+function useAppState() {
+  return useContext(AppContext)
+}
+
+
+/* ========== MAIN APP ========== */
+function App() {
+  return (
+    <AppProvider>
+      <AppInner />
+    </AppProvider>
+  )
+}
+
+function AppInner() {
+  const {
+    isRunning, setIsRunning,
+    setStatusMessage,
+    events, setEvents,
+    finalResult, setFinalResult,
+    ciRuns, setCiRuns,
+    eventSourceRef,
+    repoUrl, teamName, leaderName,
+  } = useAppState()
+
   const eventsEndRef = useRef(null)
 
   // Auto-scroll to latest event
@@ -33,13 +78,39 @@ function App() {
         const data = JSON.parse(event.data)
         console.log('[SSE]', data.type, data)
 
-        // Update status message from step events
         if (data.message) {
           setStatusMessage(data.message)
         }
 
-        // Append event to live feed
         setEvents(prev => [...prev, { ...data, _ts: new Date().toLocaleTimeString() }])
+
+        // Track CI/CD iterations
+        if (data.type === 'iteration_start' || data.type === 'iteration_complete' || data.type === 'test_result') {
+          setCiRuns(prev => {
+            const updated = [...prev]
+            if (data.type === 'iteration_start') {
+              updated.push({
+                iteration: data.iteration || updated.length + 1,
+                status: 'running',
+                timestamp: new Date().toLocaleTimeString(),
+                passed: 0,
+                failed: 0,
+              })
+            } else if (data.type === 'test_result') {
+              if (updated.length > 0) {
+                updated[updated.length - 1].passed = data.passed || 0
+                updated[updated.length - 1].failed = data.failed || 0
+                updated[updated.length - 1].status = data.failed > 0 ? 'failed' : 'passed'
+              }
+            } else if (data.type === 'iteration_complete') {
+              if (updated.length > 0) {
+                updated[updated.length - 1].status = data.all_passed ? 'passed' : 'failed'
+                updated[updated.length - 1].fixes_applied = data.fixes_applied || 0
+              }
+            }
+            return updated
+          })
+        }
 
         // Handle terminal events
         if (data.type === 'done') {
@@ -56,7 +127,6 @@ function App() {
     }
 
     es.onerror = () => {
-      // SSE connection lost — check if pipeline is still running
       console.log('[SSE] Connection error/closed')
     }
 
@@ -74,6 +144,7 @@ function App() {
     setIsRunning(true)
     setFinalResult(null)
     setEvents([])
+    setCiRuns([])
     setStatusMessage('Starting agent...')
 
     try {
@@ -98,63 +169,162 @@ function App() {
     }
   }
 
+  const result = finalResult?.result || finalResult
+
   return (
     <div className="app">
       {/* Header */}
       <header className="app-header">
-        <div className="logo">⚡</div>
-        <h1>CI/CD Healing Agent</h1>
-        <span className="subtitle">Autonomous DevOps Agent</span>
+        <div className="header-inner">
+          <div className="logo-area">
+            <div className="logo">⚡</div>
+            <div className="logo-text">
+              <h1>CI/CD Healing Agent</h1>
+              <span className="subtitle">Autonomous DevOps Agent • RIFT 2026</span>
+            </div>
+          </div>
+          <div className="header-status">
+            {isRunning && (
+              <div className="header-badge running-badge">
+                <span className="pulse-dot" />
+                Running
+              </div>
+            )}
+            {result && !isRunning && (
+              <div className={`header-badge ${result.final_status === 'PASSED' ? 'passed-badge' : 'failed-badge'}`}>
+                {result.final_status === 'PASSED' ? '✓' : '✗'} {result.final_status}
+              </div>
+            )}
+          </div>
+        </div>
       </header>
 
       <main className="main-content">
         {/* Input Section */}
-        <InputForm
-          repoUrl={repoUrl}
-          setRepoUrl={setRepoUrl}
-          teamName={teamName}
-          setTeamName={setTeamName}
-          leaderName={leaderName}
-          setLeaderName={setLeaderName}
-          isRunning={isRunning}
-          onRun={handleRun}
-        />
+        <InputForm onRun={handleRun} />
 
         {/* Status Bar */}
-        {isRunning && (
-          <div className="status-bar">
-            <div className="pulse" />
-            <span className="message">{statusMessage}</span>
-          </div>
-        )}
+        {isRunning && <StatusBar />}
 
-        {/* Live Event Feed — appears progressively */}
+        {/* Live Event Feed */}
         {events.length > 0 && (
-          <div className="live-feed">
-            <h2 className="live-feed-title">
-              <span className="live-dot" />
-              {isRunning ? 'Live Pipeline Feed' : 'Pipeline Run Complete'}
-            </h2>
-            <div className="event-list">
-              {events.map((evt, i) => (
-                <EventCard key={i} event={evt} />
-              ))}
-              <div ref={eventsEndRef} />
-            </div>
-          </div>
+          <LiveFeed events={events} isRunning={isRunning} eventsEndRef={eventsEndRef} />
         )}
 
-        {/* Final Summary after done */}
-        {finalResult && (
-          <>
-            <SummaryCard result={finalResult.result || finalResult} />
-            {finalResult.result?.all_fixes?.length > 0 && (
-              <FixesTable fixes={finalResult.result.all_fixes} />
-            )}
-          </>
+        {/* Final Results Dashboard */}
+        {result && (
+          <div className="results-dashboard">
+            <SummaryCard result={result} />
+            <ScoreBreakdownPanel result={result} />
+            {ciRuns.length > 0 && <CICDTimeline runs={ciRuns} retryLimit={result.retry_limit || 5} />}
+            {result.all_fixes?.length > 0 && <FixesTable fixes={result.all_fixes} />}
+          </div>
         )}
       </main>
+
+      {/* Footer */}
+      <footer className="app-footer">
+        <span>CI/CD Healing Agent</span>
+        <span className="footer-sep">•</span>
+        <span>RIFT 2026 Hackathon</span>
+      </footer>
     </div>
+  )
+}
+
+
+/* ========== INPUT FORM ========== */
+function InputForm({ onRun }) {
+  const { repoUrl, setRepoUrl, teamName, setTeamName, leaderName, setLeaderName, isRunning } = useAppState()
+
+  return (
+    <section className="card input-section" id="input-section">
+      <div className="card-header">
+        <span className="card-icon">🔧</span>
+        <h2>Configure Agent</h2>
+      </div>
+      <div className="form-grid">
+        <div className="form-group full-width">
+          <label htmlFor="repo-url">GitHub Repository URL</label>
+          <input
+            id="repo-url"
+            type="text"
+            placeholder="https://github.com/user/repo"
+            value={repoUrl}
+            onChange={(e) => setRepoUrl(e.target.value)}
+            disabled={isRunning}
+          />
+        </div>
+        <div className="form-group">
+          <label htmlFor="team-name">Team Name</label>
+          <input
+            id="team-name"
+            type="text"
+            placeholder="e.g., RIFT ORGANISERS"
+            value={teamName}
+            onChange={(e) => setTeamName(e.target.value)}
+            disabled={isRunning}
+          />
+        </div>
+        <div className="form-group">
+          <label htmlFor="leader-name">Team Leader Name</label>
+          <input
+            id="leader-name"
+            type="text"
+            placeholder="e.g., Saiyam Kumar"
+            value={leaderName}
+            onChange={(e) => setLeaderName(e.target.value)}
+            disabled={isRunning}
+          />
+        </div>
+        <div className="form-group btn-group">
+          <button className="btn-run" id="run-agent-btn" onClick={onRun} disabled={isRunning}>
+            {isRunning ? (
+              <>
+                <span className="spinner" />
+                Agent Running...
+              </>
+            ) : (
+              <>🚀 Analyze Repository</>
+            )}
+          </button>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+
+/* ========== STATUS BAR ========== */
+function StatusBar() {
+  const { statusMessage } = useAppState()
+  return (
+    <div className="status-bar" id="status-bar">
+      <div className="pulse-dot" />
+      <span className="message">{statusMessage}</span>
+    </div>
+  )
+}
+
+
+/* ========== LIVE FEED ========== */
+function LiveFeed({ events, isRunning, eventsEndRef }) {
+  return (
+    <section className="card live-feed" id="live-feed">
+      <div className="card-header">
+        <span className="live-indicator">
+          <span className={`live-dot ${isRunning ? 'active' : 'inactive'}`} />
+        </span>
+        <h2>{isRunning ? 'Live Pipeline Feed' : 'Pipeline Run Complete'}</h2>
+        <span className="event-count">{events.length} events</span>
+      </div>
+      <div className="event-list">
+        {events.map((evt, i) => (
+          <EventCard key={i} event={evt} />
+        ))}
+        <div ref={eventsEndRef} />
+      </div>
+    </section>
   )
 }
 
@@ -280,7 +450,7 @@ function EventCard({ event }) {
           <div className="mini-fixes">
             {event.fixes.map((fix, i) => (
               <div key={i} className="mini-fix">
-                <span className={`bug-type ${fix.bug_type}`}>{fix.bug_type}</span>
+                <span className={`bug-badge ${fix.bug_type}`}>{fix.bug_type}</span>
                 <code className="fix-file">{fix.file}:{fix.line}</code>
                 <span className="fix-desc">{fix.description}</span>
               </div>
@@ -365,61 +535,6 @@ function CollapsiblePre({ title, content }) {
 }
 
 
-/* ========== INPUT FORM ========== */
-function InputForm({ repoUrl, setRepoUrl, teamName, setTeamName, leaderName, setLeaderName, isRunning, onRun }) {
-  return (
-    <section className="input-section">
-      <h2><span className="icon">🔧</span> Configure Agent</h2>
-      <div className="form-grid">
-        <div className="form-group full-width">
-          <label>GitHub Repository URL</label>
-          <input
-            type="text"
-            placeholder="https://github.com/user/repo"
-            value={repoUrl}
-            onChange={(e) => setRepoUrl(e.target.value)}
-            disabled={isRunning}
-          />
-        </div>
-        <div className="form-group">
-          <label>Team Name</label>
-          <input
-            type="text"
-            placeholder="e.g., RIFT ORGANISERS"
-            value={teamName}
-            onChange={(e) => setTeamName(e.target.value)}
-            disabled={isRunning}
-          />
-        </div>
-        <div className="form-group">
-          <label>Team Leader Name</label>
-          <input
-            type="text"
-            placeholder="e.g., Saiyam Kumar"
-            value={leaderName}
-            onChange={(e) => setLeaderName(e.target.value)}
-            disabled={isRunning}
-          />
-        </div>
-        <div className="form-group">
-          <label>&nbsp;</label>
-          <button className="btn-run" onClick={onRun} disabled={isRunning}>
-            {isRunning ? (
-              <>
-                <span className="spinner" />
-                Agent Running...
-              </>
-            ) : (
-              <>🚀 Run Agent</>
-            )}
-          </button>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-
 /* ========== SUMMARY CARD ========== */
 function SummaryCard({ result }) {
   if (!result) return null
@@ -427,36 +542,39 @@ function SummaryCard({ result }) {
     result.final_status === 'RUNNING' ? 'running' : 'failed'
 
   return (
-    <section className="summary-card">
-      <h2>📊 Run Summary</h2>
+    <section className="card summary-card" id="run-summary">
+      <div className="card-header">
+        <span className="card-icon">📊</span>
+        <h2>Run Summary</h2>
+      </div>
       <div className="summary-grid">
         <div className="summary-item">
-          <div className="label">Repository</div>
-          <div className="value small">{result.repo_url}</div>
+          <div className="summary-label">Repository</div>
+          <div className="summary-value mono small">{result.repo_url}</div>
         </div>
         <div className="summary-item">
-          <div className="label">Team</div>
-          <div className="value">{result.team_name}</div>
+          <div className="summary-label">Team</div>
+          <div className="summary-value">{result.team_name}</div>
         </div>
         <div className="summary-item">
-          <div className="label">Leader</div>
-          <div className="value">{result.leader_name}</div>
+          <div className="summary-label">Leader</div>
+          <div className="summary-value">{result.leader_name}</div>
         </div>
         <div className="summary-item">
-          <div className="label">Branch</div>
-          <div className="value small">{result.branch_name}</div>
+          <div className="summary-label">Branch</div>
+          <div className="summary-value mono small">{result.branch_name}</div>
+        </div>
+        <div className="summary-item highlight-item">
+          <div className="summary-label">Failures Detected</div>
+          <div className="summary-value big">{result.total_failures_detected}</div>
+        </div>
+        <div className="summary-item highlight-item">
+          <div className="summary-label">Fixes Applied</div>
+          <div className="summary-value big">{result.total_fixes_applied}</div>
         </div>
         <div className="summary-item">
-          <div className="label">Failures Detected</div>
-          <div className="value">{result.total_failures_detected}</div>
-        </div>
-        <div className="summary-item">
-          <div className="label">Fixes Applied</div>
-          <div className="value">{result.total_fixes_applied}</div>
-        </div>
-        <div className="summary-item">
-          <div className="label">Status</div>
-          <div className="value">
+          <div className="summary-label">CI/CD Status</div>
+          <div className="summary-value">
             <span className={`badge ${statusClass}`}>
               {result.final_status === 'PASSED' ? '✓' : result.final_status === 'RUNNING' ? '⟳' : '✗'}
               {' '}{result.final_status}
@@ -464,9 +582,125 @@ function SummaryCard({ result }) {
           </div>
         </div>
         <div className="summary-item">
-          <div className="label">Time Taken</div>
-          <div className="value">{result.time_taken}s</div>
+          <div className="summary-label">Time Taken</div>
+          <div className="summary-value mono">{result.time_taken}s</div>
         </div>
+      </div>
+    </section>
+  )
+}
+
+
+/* ========== SCORE BREAKDOWN PANEL ========== */
+function ScoreBreakdownPanel({ result }) {
+  if (!result) return null
+
+  const baseScore = 100
+  const timeTaken = parseFloat(result.time_taken) || 0
+  const speedBonus = timeTaken < 300 ? 10 : 0 // < 5 minutes
+  const totalCommits = result.total_commits || result.all_fixes?.length || 0
+  const efficiencyPenalty = totalCommits > 20 ? (totalCommits - 20) * 2 : 0
+  const totalScore = Math.max(0, baseScore + speedBonus - efficiencyPenalty)
+
+  const scoreItems = [
+    { label: 'Base Score', value: baseScore, color: 'var(--accent)' },
+    { label: 'Speed Bonus', value: speedBonus > 0 ? `+${speedBonus}` : '0', color: 'var(--success)', note: timeTaken < 300 ? '< 5 min ✓' : '≥ 5 min' },
+    { label: 'Efficiency Penalty', value: efficiencyPenalty > 0 ? `-${efficiencyPenalty}` : '0', color: 'var(--error)', note: `${totalCommits} commits` },
+  ]
+
+  const scorePercent = Math.min(100, (totalScore / 110) * 100)
+
+  return (
+    <section className="card score-panel" id="score-breakdown">
+      <div className="card-header">
+        <span className="card-icon">🏆</span>
+        <h2>Score Breakdown</h2>
+      </div>
+
+      <div className="score-display">
+        <div className="score-circle">
+          <svg viewBox="0 0 120 120" className="score-ring">
+            <circle cx="60" cy="60" r="52" className="ring-bg" />
+            <circle
+              cx="60" cy="60" r="52"
+              className="ring-fill"
+              style={{
+                strokeDasharray: `${scorePercent * 3.27} 327`,
+              }}
+            />
+          </svg>
+          <div className="score-number">{totalScore}</div>
+          <div className="score-label">Total Score</div>
+        </div>
+      </div>
+
+      <div className="score-breakdown-bars">
+        {scoreItems.map((item, i) => (
+          <div key={i} className="score-row">
+            <div className="score-row-label">
+              <span>{item.label}</span>
+              {item.note && <span className="score-note">{item.note}</span>}
+            </div>
+            <div className="score-row-bar">
+              <div
+                className="score-bar-fill"
+                style={{
+                  width: `${Math.abs(parseInt(item.value)) / 110 * 100}%`,
+                  backgroundColor: item.color,
+                }}
+              />
+            </div>
+            <div className="score-row-value" style={{ color: item.color }}>
+              {item.value}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+
+/* ========== CI/CD STATUS TIMELINE ========== */
+function CICDTimeline({ runs, retryLimit = 5 }) {
+  return (
+    <section className="card timeline-section" id="cicd-timeline">
+      <div className="card-header">
+        <span className="card-icon">🔄</span>
+        <h2>CI/CD Status Timeline</h2>
+        <span className="iteration-count">{runs.length}/{retryLimit} iterations</span>
+      </div>
+      <div className="timeline">
+        {runs.map((run, i) => (
+          <div key={i} className={`timeline-item ${run.status}`}>
+            <div className="timeline-marker">
+              <div className={`marker-dot ${run.status}`}>
+                {run.status === 'passed' ? '✓' : run.status === 'running' ? '⟳' : '✗'}
+              </div>
+              {i < runs.length - 1 && <div className="marker-line" />}
+            </div>
+            <div className="timeline-content">
+              <div className="timeline-head">
+                <span className="iter-title">Iteration {run.iteration || i + 1}</span>
+                <span className={`badge small ${run.status}`}>
+                  {run.status === 'passed' ? 'PASSED' : run.status === 'running' ? 'RUNNING' : 'FAILED'}
+                </span>
+              </div>
+              <div className="timeline-details">
+                <span className="iter-time">🕐 {run.timestamp}</span>
+                {run.passed !== undefined && (
+                  <span className="stat-pass">✅ {run.passed} passed</span>
+                )}
+                {run.failed !== undefined && run.failed > 0 && (
+                  <span className="stat-fail">❌ {run.failed} failed</span>
+                )}
+                {run.fixes_applied !== undefined && (
+                  <span className="stat-info">🔧 {run.fixes_applied} fixes</span>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </section>
   )
@@ -476,8 +710,12 @@ function SummaryCard({ result }) {
 /* ========== FIXES TABLE ========== */
 function FixesTable({ fixes }) {
   return (
-    <section className="fixes-section">
-      <h2>🔨 All Fixes Applied</h2>
+    <section className="card fixes-section" id="fixes-table">
+      <div className="card-header">
+        <span className="card-icon">🔨</span>
+        <h2>All Fixes Applied</h2>
+        <span className="fixes-count">{fixes.length} fixes</span>
+      </div>
       <div className="fixes-table-wrapper">
         <table className="fixes-table">
           <thead>
@@ -485,7 +723,7 @@ function FixesTable({ fixes }) {
               <th>File</th>
               <th>Bug Type</th>
               <th>Line</th>
-              <th>Description</th>
+              <th>Commit Message</th>
               <th>Status</th>
             </tr>
           </thead>
@@ -494,15 +732,15 @@ function FixesTable({ fixes }) {
               <tr key={i}>
                 <td className="file-name">{fix.file}</td>
                 <td>
-                  <span className={`bug-type ${fix.bug_type}`}>
+                  <span className={`bug-badge ${fix.bug_type}`}>
                     {fix.bug_type}
                   </span>
                 </td>
-                <td>{fix.line}</td>
-                <td>{fix.description}</td>
+                <td className="line-num">{fix.line}</td>
+                <td className="commit-msg">{fix.commit_message || fix.description || `[AI-AGENT] Fix ${fix.bug_type} in ${fix.file}`}</td>
                 <td>
-                  <span className={`status-icon ${fix.status === 'applied' ? 'success' : 'fail'}`}>
-                    {fix.status === 'applied' ? '✓' : '✗'}
+                  <span className={`status-badge ${fix.status === 'applied' ? 'success' : 'fail'}`}>
+                    {fix.status === 'applied' ? '✓ Fixed' : '✗ Failed'}
                   </span>
                 </td>
               </tr>
