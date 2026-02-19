@@ -38,6 +38,9 @@ services:
     staticPublishPath: ./dist
     rootDir: ./frontend
     plan: free
+    envVars:
+      - key: VITE_API_BASE
+        value: "https://rift-backend.onrender.com"
     headers:
       - path: /*
         name: Cache-Control

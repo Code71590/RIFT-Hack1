@@ -14,9 +14,14 @@ An autonomous agent that clones a GitHub repository, detects code issues (syntax
 | **LinkedIn Video** | *(Add your LinkedIn video URL here)* |
 | **GitHub Repository** | https://github.com/Code71590/RIFT-Hack1 |
 
+### 🚀 One-Click Deploy to Render
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Code71590/RIFT-Hack1)
+
 ---
 
 ## 🏗️ Architecture Diagram
+
 
 ```
 ┌──────────────────────────────────────────────────────┐
