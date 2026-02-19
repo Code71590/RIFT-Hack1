@@ -10,7 +10,8 @@ An autonomous agent that clones a GitHub repository, detects code issues (syntax
 
 | Resource | URL |
 |----------|-----|
-| **Live Dashboard** | *(Add your deployment URL here)* |
+| **Live Dashboard** | https://rift-frontend.onrender.com |
+| **Backend API** | https://rift-backend-je0t.onrender.com |
 | **LinkedIn Video** | *(Add your LinkedIn video URL here)* |
 | **GitHub Repository** | https://github.com/Code71590/RIFT-Hack1 |
 
@@ -231,9 +232,11 @@ LLM_PROVIDER=gemini
 # GitHub Token for pushing fixes
 GITHUB_TOKEN=your_github_token_here
 
-# Gemini (recommended)
-GEMINI_API_KEY=your_gemini_api_key
-GEMINI_MODEL=gemini-flash-latest
+# Gemini (recommended) — supports up to 3 keys for automatic failover
+GEMINI_API_KEY_1=your_gemini_api_key_1
+GEMINI_API_KEY_2=your_gemini_api_key_2
+GEMINI_API_KEY_3=your_gemini_api_key_3
+GEMINI_MODEL=gemini-3-flash-preview
 
 # OpenRouter (alternative)
 OPENROUTER_API_KEY=your_openrouter_key

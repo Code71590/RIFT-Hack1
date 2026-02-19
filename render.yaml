@@ -19,10 +19,14 @@ services:
         sync: false  # set manually in Render dashboard
       - key: GITHUB_TOKEN
         sync: false
-      - key: GEMINI_API_KEY
+      - key: GEMINI_API_KEY_1
+        sync: false
+      - key: GEMINI_API_KEY_2
+        sync: false
+      - key: GEMINI_API_KEY_3
         sync: false
       - key: GEMINI_MODEL
-        value: "gemini-flash-latest"
+        value: "gemini-3-flash-preview"
       - key: OPENROUTER_API_KEY
         sync: false
       - key: OPENROUTER_MODEL
@@ -39,7 +43,7 @@ services:
     rootDir: ./frontend
     envVars:
       - key: VITE_API_BASE
-        value: "https://rift-backend.onrender.com"
+        value: "https://rift-backend-je0t.onrender.com"
     headers:
       - path: /*
         name: Cache-Control

@@ -39,9 +39,21 @@ OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1/chat/completions"
 CEREBRAS_API_KEY = os.environ.get("CEREBRAS_API_KEY", "")
 CEREBRAS_MODEL = os.environ.get("CEREBRAS_MODEL", "qwen-3-235b-a22b-instruct-2507")
 
-# Gemini settings
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+# Gemini settings — round-robin key rotation for rate-limit resilience
+GEMINI_API_KEYS = [
+    k for k in [
+        os.environ.get("GEMINI_API_KEY_1", ""),
+        os.environ.get("GEMINI_API_KEY_2", ""),
+        os.environ.get("GEMINI_API_KEY_3", ""),
+    ] if k
+]
+# Fallback: also accept the old single-key env var
+if not GEMINI_API_KEYS:
+    _single = os.environ.get("GEMINI_API_KEY", "")
+    if _single:
+        GEMINI_API_KEYS = [_single]
+_gemini_key_index = 0  # rotates on each call
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-flash-preview")
 
 # Logs directory
 LOGS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs")
@@ -173,10 +185,19 @@ def _call_cerebras(prompt: str) -> str:
 # ═══════════════════════════════════════════════════════════════════
 
 def _call_gemini(prompt: str) -> str:
-    """Send a prompt to Google Gemini API and return the response."""
-    _log("API", f"Calling Gemini model: {GEMINI_MODEL}")
+    """Send a prompt to Google Gemini API with automatic key rotation.
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
+    Tries each API key in GEMINI_API_KEYS.  On rate-limit (429),
+    quota-exhausted (403), or other transient errors the function
+    automatically switches to the next key and retries.
+    """
+    global _gemini_key_index
+    import time
+
+    if not GEMINI_API_KEYS:
+        raise RuntimeError("No Gemini API keys configured. Set GEMINI_API_KEY_1/2/3 in .env")
+
+    _log("API", f"Calling Gemini model: {GEMINI_MODEL}  ({len(GEMINI_API_KEYS)} keys available)")
 
     payload = {
         "contents": [
@@ -191,44 +212,78 @@ def _call_gemini(prompt: str) -> str:
         },
     }
 
-    retries = 3
-    backoff = 2
+    last_error = None
+    keys_tried = 0
 
-    for attempt in range(retries):
-        try:
-            response = requests.post(
-                url,
-                headers={"Content-Type": "application/json"},
-                json=payload,
-                timeout=120,
-            )
+    # Try every available key
+    while keys_tried < len(GEMINI_API_KEYS):
+        current_key = GEMINI_API_KEYS[_gemini_key_index % len(GEMINI_API_KEYS)]
+        key_label = f"Key #{(_gemini_key_index % len(GEMINI_API_KEYS)) + 1}"
+        url = (
+            f"https://generativelanguage.googleapis.com/v1beta/models/"
+            f"{GEMINI_MODEL}:generateContent?key={current_key}"
+        )
 
-            if response.status_code == 429:
+        retries = 3
+        backoff = 2
+
+        for attempt in range(retries):
+            try:
+                _log("API", f"Attempt {attempt+1}/{retries} with {key_label}")
+                response = requests.post(
+                    url,
+                    headers={"Content-Type": "application/json"},
+                    json=payload,
+                    timeout=120,
+                )
+
+                # Rate-limited or quota exhausted → rotate to next key
+                if response.status_code in (429, 403):
+                    error_body = response.text[:300]
+                    _log("WARN", f"{key_label} returned {response.status_code}: {error_body}")
+
+                    # On last retry for this key, break out to try next key
+                    if attempt < retries - 1:
+                        sleep_time = backoff * (2 ** attempt)
+                        _log("WARN", f"Retrying {key_label} in {sleep_time}s...")
+                        time.sleep(sleep_time)
+                        continue
+                    else:
+                        last_error = f"{key_label} exhausted ({response.status_code})"
+                        _log("WARN", f"{key_label} exhausted. Rotating to next key...")
+                        break  # break retry loop → try next key
+
+                response.raise_for_status()
+
+                data = response.json()
+                reply = data["candidates"][0]["content"]["parts"][0]["text"]
+
+                _log_block("RECV", f"RESPONSE FROM GEMINI ({key_label})", reply)
+                return reply
+
+            except requests.exceptions.RequestException as e:
+                last_error = str(e)
+                _log("ERROR", f"Gemini API call failed with {key_label}: {e}")
                 if attempt < retries - 1:
                     sleep_time = backoff * (2 ** attempt)
-                    _log("WARN", f"Gemini rate limited (429). Retrying in {sleep_time}s...")
-                    import time
+                    _log("WARN", f"Retrying {key_label} in {sleep_time}s...")
                     time.sleep(sleep_time)
                     continue
                 else:
-                    raise RuntimeError("Gemini rate limit exceeded (429).")
+                    _log("WARN", f"{key_label} failed after {retries} retries. Rotating...")
+                    break
+            except (KeyError, IndexError) as e:
+                _log("ERROR", f"Unexpected Gemini response format: {e}")
+                _log("ERROR", f"Raw response: {response.text[:500]}")
+                raise RuntimeError(f"Gemini returned unexpected response format: {e}")
 
-            response.raise_for_status()
+        # Move to next key
+        _gemini_key_index = (_gemini_key_index + 1) % len(GEMINI_API_KEYS)
+        keys_tried += 1
 
-            data = response.json()
-            # Gemini response format: candidates[0].content.parts[0].text
-            reply = data["candidates"][0]["content"]["parts"][0]["text"]
-
-            _log_block("RECV", "RESPONSE FROM GEMINI", reply)
-            return reply
-
-        except requests.exceptions.RequestException as e:
-            _log("ERROR", f"Gemini API call failed: {e}")
-            raise RuntimeError(f"Gemini API call failed: {e}")
-        except (KeyError, IndexError) as e:
-            _log("ERROR", f"Unexpected Gemini response format: {e}")
-            _log("ERROR", f"Raw response: {response.text[:500]}")
-            raise RuntimeError(f"Gemini returned unexpected response format: {e}")
+    raise RuntimeError(
+        f"All {len(GEMINI_API_KEYS)} Gemini API keys exhausted. Last error: {last_error}"
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════
