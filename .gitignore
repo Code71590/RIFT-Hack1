@@ -1,0 +1,32 @@
+# ═══════════════════════════════════════════
+#  Global .gitignore
+# ═══════════════════════════════════════════
+
+# Environment / secrets
+.env
+*.env
+backend/.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+
+# Node
+node_modules/
+dist/
+
+# Agent workspace (cloned repos at runtime)
+backend/workspace/
+backend/logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
