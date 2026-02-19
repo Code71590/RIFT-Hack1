@@ -1,0 +1,43 @@
+================================================================================
+  LABEL: ask_for_fixes
+  TIME:  2026-02-20_03-09-15
+  MODE:  DUMMY
+================================================================================
+
+>>> PROMPT SENT TO LLM:
+--------------------------------------------------------------------------------
+(DUMMY MODE — no prompt sent)
+--------------------------------------------------------------------------------
+
+<<< RESPONSE FROM LLM:
+--------------------------------------------------------------------------------
+{
+  "fixes": [
+    {
+      "file": "src/utils.py",
+      "line": 59,
+      "old_code": "    return n + factorial(n - 1)  # LOGIC ERROR line 53: uses + instead of * \u2014 gives wrong result",
+      "new_code": "    return n * factorial(n - 1)",
+      "bug_type": "LOGIC",
+      "description": "Fix factorial: should use '*' not '+'"
+    },
+    {
+      "file": "src/config.py",
+      "line": 49,
+      "old_code": "        return port  # should be: return int(port)",
+      "new_code": "        return int(port)",
+      "bug_type": "TYPE_ERROR",
+      "description": "Fix get_port: cast to int to handle string from env var"
+    },
+    {
+      "file": "src/data_processor.py",
+      "line": 26,
+      "old_code": "    return [item for item in data if item.get(\"value\", 0) < threshold]",
+      "new_code": "    return [item for item in data if item.get(\"value\", 0) > threshold]",
+      "bug_type": "LOGIC",
+      "description": "Fix filter_by_value: should use '>' not '<' for above threshold"
+    }
+  ],
+  "commit_title": "[AI-AGENT] Fix logic and type errors"
+}
+--------------------------------------------------------------------------------

@@ -1,0 +1,223 @@
+================================================================================
+  LABEL: ask_for_fixes
+  TIME:  2026-02-20_03-08-31
+  MODE:  GEMINI
+================================================================================
+
+>>> PROMPT SENT TO LLM:
+--------------------------------------------------------------------------------
+You are a code-fixing AI. Here are the test errors:
+
+  - Test: collection_error:tests/test_validator.py | File: tests/test_validator.py | Line: 0 | Error: D:\ProgramData\miniconda3\Lib\site-packages\_pytest\python.py:493: in importtestmodule
+    mod = import_path(
+
+Here are the source files:
+
+
+--- FILE: src/__init__.py ---
+
+
+--- FILE: src/calculator.py ---
+"""
+Core calculator module.
+
+Provides basic arithmetic operations: add, subtract,
+multiply, divide, and square_root.
+"""
+
+from math import sqrt
+
+
+def add(a: float, b: float) -> float:
+    """Return the sum of two numbers."""
+    return a + b
+
+
+def subtract(a: float, b: float) -> float:
+    """Return the difference of two numbers (a - b)."""
+    return a - b
+
+
+def multiply(a: float, b: float) -> float:
+    """Return the product of two numbers."""
+    return a * b
+
+
+def divide(a: float, b: float) -> float:
+    """Return the quotient of two numbers.
+
+    Raises:
+        ValueError: If b is zero.
+    """
+    if b == 0:
+        raise ValueError("Cannot divide by zero")
+    return a / b
+
+
+def power(base: float, exponent: float) -> float:
+    """Return base raised to the given exponent."""
+    return base ** exponent
+
+
+def square_root(value: float) -> float:
+    """Return the square root of a non-negative number.
+
+    Raises:
+        ValueError: If value is negative.
+    """
+    if value < 0:
+        raise ValueError("Cannot compute square root of a negative number")
+    return sqrt(value)
+
+
+def percentage(value: float, total: float) -> float:
+    """Return what percentage 'value' is of 'total'."""
+    if total == 0:
+        raise ValueError("Total cannot be zero")
+    return (value / total) * 100
+
+
+def average(*numbers: float) -> float:
+    """Return the average of the given numbers."""
+    if not numbers:
+        raise ValueError("Need at least one number to compute average")
+    return sum(numbers) / len(numbers)
+
+
+def safe_multiply(a, b) -> float:
+    """Multiply two values, coercing strings to numbers.
+
+    Raises:
+        TypeError: If values cannot be converted.
+    """
+    return a * b                   # BUG #4 (TYPE_ERROR): fails when b is a string like "3" — line 74
+
+
+--- FILE: src/utils.py ---
+"""
+Utility functions for the calculator.
+
+Provides formatting helpers and common operations
+used throughout the calculator package.
+"""
+
+import logging
+from typing import Optional
+from datetime import datetime
+
+
+logger = logging.getLogger(__name__)
+
+
+def format_result(operation: str, a: float, b: float, result: float) -> str:
+    """Format a calculation result as a human-readable string."""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return f"[{timestamp}] {a} {operation} {b} = {result}"
+
+
+def parse_number(value: str) -> Optional[float]:
+    """Parse a string into a number, returning None if invalid."""
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        logger.warning(f"Could not parse '{value}' as a number")
+        return None
+
+
+def clamp(value: float, min_val: float, max_val: float) -> float:
+    """Clamp a value between min and max bounds."""
+    return max(min_val, min(value, max_val))
+
+
+def is_close(a: float, b: float, tolerance: float = 1e-9) -> bool:
+    """Check if two floats are approximately equal."""
+    return abs(a - b) < tolerance
+
+
+--- FILE: src/validator.py ---
+"""
+Input validation for the calculator.
+
+Ensures that user-provided values are safe and valid
+before being passed to calculator operations.
+"""
+
+def validate_input(value):
+    """Validate that a value is a valid number for calculation."""
+    if value is None:
+        return False, "Value cannot be None"
+    try:
+        num = float(value)
+        if num != num:  # NaN check
+        return False, "Value is NaN"
+        return True, num
+    except (ValueError, TypeError):
+        return False, f"Invalid input: {value}"
+
+
+def validate_operation(op: str) -> tuple:
+    """Validate that the operation string is supported."""
+    valid_ops = ["+", "-", "*", "/"]
+    if op in valid_ops:
+        return True, op
+    return False, f"Unsupported operation: '{op}'. Use one of {valid_ops}"
+
+
+def validate_divisor(value: float) -> tuple:
+    """Check that a divisor is not zero."""
+    if value == 0:
+        return False, "Division by zero is not allowed"
+    return True, value
+
+
+
+For each bug, provide a fix.
+
+Respond ONLY with valid JSON:
+{
+  "fixes": [
+    {
+      "file": "relative/path/to/file.py",
+      "line": <line_number>,
+      "old_code": "<exact current line>",
+      "new_code": "<corrected line>",
+      "bug_type": "<SYNTAX|LOGIC|IMPORT|LINTING|TYPE_ERROR|INDENTATION|OTHER>",
+      "description": "<short description>"
+    }
+  ],
+  "commit_title": "[AI-AGENT] <summary of fixes>"
+}
+
+IMPORTANT:
+- "old_code" must match the EXACT current line (whitespace matters).
+- "new_code" is the replacement. Use "" to delete a line.
+- Include ALL fixes needed.
+
+--------------------------------------------------------------------------------
+
+<<< RESPONSE FROM LLM:
+--------------------------------------------------------------------------------
+```json
+{
+  "fixes": [
+    {
+      "file": "src/validator.py",
+      "line": 12,
+      "old_code": "        return False, \"Value is NaN\"",
+      "new_code": "            return False, \"Value is NaN\"",
+      "bug_type": "INDENTATION",
+      "description": "Fix indentation for the return statement inside the NaN check in validate_input."
+    },
+    {
+      "file": "src/calculator.py",
+      "line": 74,
+      "old_code": "    return a * b",
+      "new_code": "    try:\n        num_a = float(a)\n        num_b = float(b)\n        return num_a * num_b\n    except (ValueError, TypeError) as e:\n        raise TypeError(\"Cannot convert values to numbers for multiplication\") from e",
+      "bug_type": "TYPE_ERROR",
+      "description": "Coerce inputs to float before multiplication in safe_multiply to handle string representations of numbers, raising TypeError if conversion fails."
+    }
+  ],
+  "commit_title": "[AI-AGENT] Fix indentation in validator and type coercion in safe_multiply"
+}
+```
+--------------------------------------------------------------------------------
