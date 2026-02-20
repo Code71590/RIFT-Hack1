@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, createContext, useContext } from 'react'
 import './index.css'
 
-const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.PROD ? '' : 'http://localhost:5000')
+const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.PROD ? 'https://rift-backend-je0t.onrender.com' : 'http://localhost:5000')
 
 /* ========== APP STATE CONTEXT ========== */
 const AppContext = createContext()
