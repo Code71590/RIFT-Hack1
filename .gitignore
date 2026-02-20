@@ -7,6 +7,9 @@
 *.env
 backend/.env
 
+# Personal docs
+PPT_OUTLINE.md
+
 # Python
 __pycache__/
 *.pyc
