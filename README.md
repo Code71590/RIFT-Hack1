@@ -12,7 +12,7 @@ An autonomous agent that clones a GitHub repository, detects code issues (syntax
 |----------|-----|
 | **Live Dashboard** | https://rift-frontend.onrender.com |
 | **Backend API** | https://rift-backend-je0t.onrender.com |
-| **LinkedIn Video** | *(Add your LinkedIn video URL here)* |
+| **LinkedIn Video** | [Watch Demo](https://www.linkedin.com/posts/ullas-a-u-678723375_creating-autonomous-cicd-healing-agent-ugcPost-7430450633629057024-ZL2C?utm_source=share&utm_medium=member_android&rcm=ACoAAFzVXfwBq_8gI-lGdv8N5IhUhlGMcJx_gKA) |
 | **GitHub Repository** | https://github.com/Code71590/RIFT-Hack1 |
 
 ### 🚀 One-Click Deploy to Render
