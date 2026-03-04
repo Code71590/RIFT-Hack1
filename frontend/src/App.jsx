@@ -7,7 +7,7 @@ const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.PROD ? 'https
 const AppContext = createContext()
 
 function AppProvider({ children }) {
-  const [repoUrl, setRepoUrl] = useState('https://github.com/Code71590/buggy-calculator')
+  const [repoUrl, setRepoUrl] = useState('https://github.com/Code71590/dummy-buggy-repo')
   const [teamName, setTeamName] = useState('Bubble')
   const [leaderName, setLeaderName] = useState('Ullas A U')
   const [isRunning, setIsRunning] = useState(false)
